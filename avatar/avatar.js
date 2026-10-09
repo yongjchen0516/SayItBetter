@@ -1,4 +1,5 @@
-// 3D 虛擬人物：預設為程式碼生成的卡通角色；若 models/ 內有 .vrm 則改用該模型。
+// 3D 虛擬人物：預設為程式碼生成的卡通角色；若 models/ 內有 .vrm 或 .glb 則改用該模型。
+// .glb 需含 ARKit 臉部控制點（jawOpen、mouthSmileLeft…）與 Mixamo 命名的骨架（Head、Spine1、LeftArm…）。
 import * as THREE from 'three';
 
 // ---------------------------------------------------------------- 性格外觀
@@ -23,6 +24,27 @@ const EMOTIONS = {
 };
 
 const VRM_EXPRESSIONS = { happy: 'happy', angry: 'angry', sad: 'sad', surprised: 'surprised' };
+
+// .glb（ARKit 控制點）的情緒表情；左右對稱的控制點只寫一次，L/R 會自動展開
+const ARKIT_EMOTIONS = {
+  neutral:   {},
+  happy:     { mouthSmile: 0.55, cheekSquint: 0.35, eyeSquint: 0.2, browInnerUp: 0.1 },
+  angry:     { browDown: 0.75, noseSneer: 0.3, eyeSquint: 0.3, mouthPress: 0.35, mouthFrown: 0.25 },
+  sad:       { browInnerUp: 0.8, mouthFrown: 0.55, mouthShrugLower: 0.3, eyeSquint: 0.15 },
+  annoyed:   { browDown: 0.4, eyeSquint: 0.35, mouthPress: 0.4, mouthFrown: 0.15, noseSneer: 0.1 },
+  surprised: { browInnerUp: 0.7, browOuterUp: 0.75, eyeWide: 0.6, jawOpen: 0.08 },
+};
+const ARKIT_PAIRED = ['mouthSmile', 'mouthFrown', 'mouthPress', 'cheekSquint', 'eyeSquint', 'eyeWide',
+  'browDown', 'browOuterUp', 'noseSneer'];
+const expandArkit = (o) => Object.fromEntries(Object.entries(o).flatMap(([k, v]) =>
+  ARKIT_PAIRED.includes(k) ? [[k + 'Left', v], [k + 'Right', v]] : [[k, v]]));
+const ARKIT_TARGETS = Object.fromEntries(Object.entries(ARKIT_EMOTIONS).map(([k, v]) => [k, expandArkit(v)]));
+// 每幀都要歸零再設定的控制點（情緒會用到的全部，加上嘴巴與眨眼）
+const ARKIT_ANIMATED = [...new Set([
+  ...Object.values(ARKIT_TARGETS).flatMap(Object.keys),
+  'jawOpen', 'viseme_aa', 'eyeBlinkLeft', 'eyeBlinkRight',
+  'mouthLowerDownLeft', 'mouthLowerDownRight', 'mouthUpperUpLeft', 'mouthUpperUpRight',
+])];
 
 const ARM_DOWN = 1.25;   // 手臂放下的角度（弧度）；若模型手臂往上翹，把正負號對調
 
@@ -57,7 +79,9 @@ export class Avatar {
     this.clock = new THREE.Clock();
     this.t = 0;
     this.vrm = null;
+    this.glb = null;           // 載入的 .glb：{ scene, meshes, head, spine, headRest, spineRest }
     this.vrmEmotion = 'neutral';
+    this.morphCur = {};        // .glb 控制點目前值（平滑過渡用）
     this.fixedMouth = null;    // 測試用：固定嘴型
 
     this._buildCharacter();
@@ -220,14 +244,15 @@ export class Avatar {
 
   setFixedMouth(v) { this.fixedMouth = v; }
 
-  /** 依性別找模型（找到第一個就用）：
-   *  女生：female_<性格>.vrm → female.vrm → default.vrm；男生：male_<性格>.vrm → male.vrm。
-   *  都沒有時顯示內建卡通角色。成功載入 VRM 回傳 true。 */
+  /** 依性別找模型（找到第一個就用；同名時 .vrm 優先於 .glb）：
+   *  女生：female_<性格> → female → default；男生：male_<性格> → male。
+   *  都沒有時顯示內建卡通角色。成功載入模型回傳 true。 */
   async tryLoadVrm(personaName, gender = 'female', base = './models/') {
     const seq = (this._loadSeq = (this._loadSeq || 0) + 1);   // 只採用最後一次請求的結果
     const g = gender === 'male' ? 'male' : 'female';
-    const candidates = [`${g}_${personaName}.vrm`, `${g}.vrm`];
-    if (g === 'female') candidates.push('default.vrm');       // default.vrm 是女生模型，男生不使用
+    const names = [`${g}_${personaName}`, g];
+    if (g === 'female') names.push('default');                 // default 是女生模型，男生不使用
+    const candidates = names.flatMap((n) => [`${n}.vrm`, `${n}.glb`]);
     try {
       let url = null;
       for (const c of candidates) {
@@ -236,59 +261,107 @@ export class Avatar {
       }
       if (seq !== this._loadSeq) return false;
       if (!url) { this._showProcedural(); return false; }
-      if (this.vrm && this.vrmUrl === url) return true;        // 已經是這個模型
+      if (this.modelUrl === url) return true;                  // 已經是這個模型
 
+      const isVrm = url.endsWith('.vrm');
       const [{ GLTFLoader }, vrmLib] = await Promise.all([
         import('./vendor/examples/jsm/loaders/GLTFLoader.js'),
-        import('./vendor/three-vrm.module.min.js'),
+        isVrm ? import('./vendor/three-vrm.module.min.js') : null,
       ]);
       const loader = new GLTFLoader();
-      loader.register((parser) => new vrmLib.VRMLoaderPlugin(parser));
+      if (isVrm) loader.register((parser) => new vrmLib.VRMLoaderPlugin(parser));
       const gltf = await loader.loadAsync(url);
-      const vrm = gltf.userData.vrm;
       if (seq !== this._loadSeq) return false;                 // 載入期間又切換了
-      if (!vrm) { this._showProcedural(); return false; }
-      vrmLib.VRMUtils.rotateVRM0?.(vrm);
-      this._removeVrm();
-      this.root.visible = false;
-      this.scene.add(vrm.scene);
-      this.vrm = vrm;
-      this.vrmUrl = url;
-
-      // 預設是 T 字形張開雙臂，把手臂放下成自然站姿
-      const h = vrm.humanoid;
-      const lArm = h?.getNormalizedBoneNode('leftUpperArm');
-      const rArm = h?.getNormalizedBoneNode('rightUpperArm');
-      if (lArm) lArm.rotation.z = ARM_DOWN;
-      if (rArm) rArm.rotation.z = -ARM_DOWN;
-      this.vrmHead = h?.getNormalizedBoneNode('head') || null;
-      this.vrmSpine = h?.getNormalizedBoneNode('spine') || null;
-      vrm.scene.updateMatrixWorld(true);
-
-      // 鏡頭：以頭部骨骼為基準，取頭到胸口的半身構圖
-      const p = new THREE.Vector3();
-      (this.vrmHead || vrm.scene).getWorldPosition(p);
-      this.vrmFrame = p.clone();
+      if (isVrm) {
+        if (!gltf.userData.vrm) { this._showProcedural(); return false; }
+        this._useVrm(gltf.userData.vrm, vrmLib);
+      } else if (!this._useGlb(gltf.scene)) {
+        this._showProcedural();
+        return false;
+      }
+      this.modelUrl = url;
       this._frameVrm();
       return true;
     } catch (err) {
-      console.warn('VRM 載入失敗，改用內建角色：', err);
+      console.warn('模型載入失敗，改用內建角色：', err);
       if (seq === this._loadSeq) this._showProcedural();
       return false;
     }
   }
 
-  _removeVrm() {
-    if (!this.vrm) return;
-    this.scene.remove(this.vrm.scene);
-    this.vrm = null;
-    this.vrmUrl = null;
+  _useVrm(vrm, vrmLib) {
+    vrmLib.VRMUtils.rotateVRM0?.(vrm);
+    this._removeModel();
+    this.root.visible = false;
+    this.scene.add(vrm.scene);
+    this.vrm = vrm;
+
+    // 預設是 T 字形張開雙臂，把手臂放下成自然站姿
+    const h = vrm.humanoid;
+    const lArm = h?.getNormalizedBoneNode('leftUpperArm');
+    const rArm = h?.getNormalizedBoneNode('rightUpperArm');
+    if (lArm) lArm.rotation.z = ARM_DOWN;
+    if (rArm) rArm.rotation.z = -ARM_DOWN;
+    this.vrmHead = h?.getNormalizedBoneNode('head') || null;
+    this.vrmSpine = h?.getNormalizedBoneNode('spine') || null;
+    vrm.scene.updateMatrixWorld(true);
+
+    // 鏡頭：以頭部骨骼為基準，取頭到胸口的半身構圖
+    const p = new THREE.Vector3();
+    (this.vrmHead || vrm.scene).getWorldPosition(p);
+    this.vrmFrame = p.clone();
+  }
+
+  /** 使用一般 .glb：找出有臉部控制點的網格與 Mixamo 命名的骨骼。沒有 jawOpen 視為不支援。 */
+  _useGlb(scene) {
+    const meshes = [];
+    scene.traverse((o) => {
+      if (o.isMesh && o.morphTargetDictionary) meshes.push(o);
+      if (o.isMesh) o.frustumCulled = false;   // 蒙皮網格的包圍盒不準，避免拉近時整塊消失
+    });
+    if (!meshes.some((m) => 'jawOpen' in m.morphTargetDictionary)) {
+      console.warn('這個 .glb 沒有 ARKit 臉部控制點（jawOpen），改用內建角色');
+      return false;
+    }
+    const bone = (name) => scene.getObjectByName(name) || scene.getObjectByName('mixamorig' + name);
+    this._removeModel();
+    this.root.visible = false;
+    this.scene.add(scene);
+    scene.updateMatrixWorld(true);
+
+    // 手臂從 T／A 字形放下：讓上臂指向斜下方（依骨骼實際方向計算，不受模型座標系影響）
+    for (const [arm, fore, side] of [['LeftArm', 'LeftForeArm', 1], ['RightArm', 'RightForeArm', -1]]) {
+      const a = bone(arm), f = bone(fore);
+      if (a && f) pointBone(a, f, new THREE.Vector3(0.12 * side, -1, 0.02));
+    }
+    const head = bone('Head');
+    const spine = bone('Spine1') || bone('Spine');
+    this.glb = {
+      scene, meshes, head, spine,
+      headRest: head?.quaternion.clone(),
+      spineRest: spine?.quaternion.clone(),
+    };
+    this.morphCur = {};
+    scene.updateMatrixWorld(true);
+
+    // 鏡頭基準：Mixamo 的 Head 骨骼在頭底部，與 VRM 的 head 位置相近
+    const p = new THREE.Vector3();
+    (head || scene).getWorldPosition(p);
+    this.vrmFrame = p;
+    return true;
+  }
+
+  _removeModel() {
+    if (this.vrm) this.scene.remove(this.vrm.scene);
+    if (this.glb) this.scene.remove(this.glb.scene);
+    this.vrm = this.glb = null;
+    this.modelUrl = null;
     this.vrmHead = this.vrmSpine = this.vrmFrame = null;
   }
 
   /** 改回內建卡通角色，並把鏡頭還原成卡通角色的取景。 */
   _showProcedural() {
-    this._removeVrm();
+    this._removeModel();
     this.root.visible = true;
     this.camera.position.set(0, 0.2, 4.2);
     this.camera.lookAt(0, -0.1, 0);
@@ -312,7 +385,7 @@ export class Avatar {
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
-    if (this.vrm) this._frameVrm();
+    if (this.vrmFrame) this._frameVrm();
     // 窄螢幕（直向手機）時把鏡頭拉遠，避免頭被裁切
     else this.camera.position.z = w / h < 0.9 ? 4.2 / Math.max(0.62, w / h) * 0.82 : 4.2;
     this.camera.updateProjectionMatrix();
@@ -340,6 +413,7 @@ export class Avatar {
     }
 
     if (this.vrm) this._updateVrm(dt, blink);
+    else if (this.glb) this._updateGlb(dt, blink);
     else this._updateProcedural(dt, blink);
 
     this.renderer.render(this.scene, this.camera);
@@ -410,4 +484,54 @@ export class Avatar {
     }
     this.vrm.update(dt);
   }
+
+  _updateGlb(dt, blink) {
+    const { meshes, head, spine, headRest, spineRest } = this.glb;
+    const target = ARKIT_TARGETS[this.vrmEmotion] || ARKIT_TARGETS.neutral;
+    const k = 1 - Math.exp(-9 * dt);
+    const talk = clamp(this.mouth, 0, 1);
+    const values = {};
+    for (const n of ARKIT_ANIMATED) {
+      const cur = this.morphCur[n] || 0;
+      values[n] = this.morphCur[n] = cur + ((target[n] || 0) - cur) * k;
+    }
+    // 說話：下顎張開、上下唇分開，加一點「啊」的嘴型（只用 viseme 的話舌頭會露太多）；
+    // 說話時收一點笑容，嘴型才不會被拉扁
+    values.jawOpen = clamp(values.jawOpen + talk * 0.4, 0, 1);
+    values.viseme_aa = clamp(talk * 0.2, 0, 1);
+    for (const s of ['Left', 'Right']) {
+      values['mouthLowerDown' + s] = clamp(talk * 0.4, 0, 1);
+      values['mouthUpperUp' + s] = clamp(talk * 0.2, 0, 1);
+      values['mouthSmile' + s] *= 1 - talk * 0.5;
+      values['mouthPress' + s] *= 1 - talk;
+      values['eyeBlink' + s] = clamp(blink + (values['eyeBlink' + s] || 0), 0, 1);
+    }
+    for (const m of meshes) {
+      const dict = m.morphTargetDictionary, inf = m.morphTargetInfluences;
+      for (const n in values) {
+        const i = dict[n];
+        if (i !== undefined) inf[i] = values[n];
+      }
+    }
+    // 待機動作：呼吸與輕微晃頭；說話時微點頭（疊加在骨骼原本的姿勢上）
+    if (spine) spine.quaternion.copy(spineRest).multiply(_q.setFromEuler(_e.set(Math.sin(this.t * 1.6) * 0.012, 0, 0)));
+    if (head) {
+      _e.set(Math.sin(this.t * 0.8) * 0.02 + this.mouth * 0.05, Math.sin(this.t * 0.55) * 0.07, Math.sin(this.t * 0.42) * 0.02);
+      head.quaternion.copy(headRest).multiply(_q.setFromEuler(_e));
+    }
+  }
+}
+
+const _q = new THREE.Quaternion();
+const _e = new THREE.Euler();
+
+/** 旋轉骨骼 bone，讓它指向子骨骼 child 的方向變成世界座標的 dir。 */
+function pointBone(bone, child, dir) {
+  const a = bone.getWorldPosition(new THREE.Vector3());
+  const b = child.getWorldPosition(new THREE.Vector3());
+  const turn = new THREE.Quaternion().setFromUnitVectors(b.sub(a).normalize(), dir.clone().normalize());
+  const world = bone.getWorldQuaternion(new THREE.Quaternion()).premultiply(turn);
+  const parent = bone.parent.getWorldQuaternion(new THREE.Quaternion());
+  bone.quaternion.copy(parent.invert().multiply(world));
+  bone.updateMatrixWorld(true);
 }

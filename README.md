@@ -74,8 +74,9 @@ flutter build web --release
 - 對方的回應和教練點評是分開取得的：對方先開口，點評稍後出現在你的那句話下方。
 - 也可以隨時打字回覆。**iPhone（區網 http）** 無法使用麥克風與語音辨識，會自動隱藏麥克風，但仍看得到角色、聽得到對方說話。
 - 開始前可選對方是「女生／男生」：角色外觀、對方的聲音（女聲曉臻／男聲雲哲）與說話口吻都會跟著改變。
-- 想換成自己的角色：把 `.vrm` 模型放進 `avatar/models/`（女生用 `female.vrm` 或 `default.vrm`，男生用 `male.vrm`，
-  也可依性格命名如 `male_強勢直率.vrm`），說明見該資料夾的 README。
+- 女生預設是寫實 3D 人物（`avatar/models/female.glb`，CC0 授權），男生是內建卡通角色。
+- 想換成自己的角色：把寫實 `.glb`（需含 ARKit 臉部控制點）或動漫風 `.vrm` 放進 `avatar/models/`
+  （女生 `female.*`，男生 `male.*`，也可依性格命名如 `male_強勢直率.glb`），格式、授權與取得方式見該資料夾的 README。
 - 瀏覽器內建的語音辨識需要連網。
 
 ## 部署：上傳 GitHub ＋ Render 雲端
@@ -93,7 +94,7 @@ flutter build web --release
    ```
    第一次 push 會跳出 GitHub 登入視窗，用瀏覽器授權即可。
 3. 上傳前確認沒有密鑰被加入：`git status` 不應出現 `.streamlit/secrets.toml` 或 `templates.db`（已列在 `.gitignore`）。
-   `.vrm` 角色模型預設也不上傳，雲端會使用內建的卡通角色。
+   `.vrm` 角色模型預設也不上傳（授權多半禁止再散布）；`.glb` 會上傳，請確認授權允許公開。
 
 之後改了程式，只要：
 ```powershell

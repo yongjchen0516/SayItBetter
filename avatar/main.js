@@ -67,6 +67,7 @@ if (params.has('persona')) avatar.setPersona(params.get('persona'));
 if (params.has('gender')) avatar.setGender(params.get('gender'));
 if (params.has('emotion')) avatar.setEmotion(params.get('emotion'));
 if (params.has('mouth')) avatar.setFixedMouth(parseFloat(params.get('mouth')) || 0);
+if (params.has('model')) avatar.tryLoadVrm(avatar.personaName, avatar.gender);   // 例：?gender=female&model
 if (embedded) hint.style.display = 'none';
 
 post({ type: 'ready', sttSupported: voice.sttSupported });
