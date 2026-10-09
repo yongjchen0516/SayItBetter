@@ -1,0 +1,24 @@
+name: comm_assistant
+description: 生活人際溝通輔助系統（Flutter 前端）
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.0
+  shared_preferences: ^2.2.0
+  audioplayers: ^6.0.0
+  speech_to_text: ^7.0.0
+  web: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true

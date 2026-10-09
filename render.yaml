@@ -1,0 +1,31 @@
+# Render Blueprint：在 Render 選 New → Blueprint 並指定這個儲存庫即可建立服務。
+# 標示 sync: false 的變數是密鑰，Render 會在建立時請你填入，不會寫在程式碼裡。
+services:
+  - type: web
+    name: comm-assistant
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements-server.txt
+    # --proxy-headers：讓程式知道外部是 https，Google 登入的回呼網址才會正確
+    startCommand: uvicorn api:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /api/meta
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: AZURE_OPENAI_ENDPOINT
+        sync: false
+      - key: AZURE_OPENAI_API_KEY
+        sync: false
+      - key: AZURE_OPENAI_DEPLOYMENT
+        value: gpt-4.1
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: AUTH_COOKIE_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false

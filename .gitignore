@@ -1,0 +1,14 @@
+# 密鑰與個人資料
+.streamlit/secrets.toml
+templates.db
+
+# 3D 角色模型：VRoid Hub 授權多半「禁止再散布」，預設不上傳。確認授權允許後再移除這一行。
+avatar/models/*.vrm
+
+# 產生的檔案（Flutter 網頁版的編譯結果要上傳，雲端直接使用，不在雲端編譯）
+__pycache__/
+mobile/build/*
+!mobile/build/web/
+mobile/.dart_tool/
+mobile/.idea/
+mobile/*.iml
