@@ -323,7 +323,13 @@ export class Avatar {
       console.warn('這個 .glb 沒有 ARKit 臉部控制點（jawOpen），改用內建角色');
       return false;
     }
-    const bone = (name) => scene.getObjectByName(name) || scene.getObjectByName('mixamorig' + name);
+    // 骨骼名稱：Mixamo（Head、LeftArm…，可有 mixamorig 前綴）或 3ds Max Biped（Rocketbox 的 Bip01 Head…；
+    // three.js 會把名稱中的空白換成底線）
+    const BIPED = { Head: 'Head', Spine: 'Spine', Spine1: 'Spine1', LeftArm: 'L UpperArm', LeftForeArm: 'L Forearm',
+      RightArm: 'R UpperArm', RightForeArm: 'R Forearm' };
+    const bone = (name) => [name, 'mixamorig' + name, 'mixamorig:' + name, `Bip01 ${BIPED[name]}`]
+      .map((n) => scene.getObjectByName(n) || scene.getObjectByName(n.replace(/[\s:]/g, '_')))
+      .find(Boolean);
     this._removeModel();
     this.root.visible = false;
     this.scene.add(scene);

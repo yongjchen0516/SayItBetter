@@ -15,16 +15,27 @@
 ## 目前內建的模型
 | 檔案 | 來源 | 授權 |
 |---|---|---|
-| `female.glb` | [TalkingHead](https://github.com/met4citizen/TalkingHead) 的 `avatars/mpfb.glb`（以 Blender + MPFB 製作），用 `tools/shrink_glb.py` 縮小：37 MB → 8 MB | CC0（公眾領域，可公開、可商用） |
+| `female.glb` | [Microsoft Rocketbox](https://github.com/microsoft/Microsoft-Rocketbox) 的 `Adults/Female_Adult_15`（`_facial` 版） | MIT（可公開、可商用） |
+| `male.glb` | Microsoft Rocketbox 的 `Adults/Male_Adult_02`（`_facial` 版） | MIT（可公開、可商用） |
+
+轉檔方式（需要 Blender，以 Male_Adult_02 為例）：
+```powershell
+blender -b --python tools/rocketbox_to_glb.py -- Male_Adult_02/Export/Male_Adult_02_facial.fbx Male_Adult_02/Textures male_raw.glb
+python tools/shrink_glb.py male_raw.glb avatar/models/male.glb    # 約 30 MB → 3 MB
+```
+換其他 Rocketbox 人物也是同樣兩行。Rocketbox 的授權全文在 `ROCKETBOX_LICENSE.md`（MIT 要求散布時附上）。
+
+之前用過的 TalkingHead `mpfb.glb`（CC0）也相容，可用 `shrink_glb.py` 縮小後放進來。
 
 ## 支援的格式
 - **寫實 `.glb`**：需含 **ARKit 臉部控制點**（至少 `jawOpen`，另有 `mouthSmileLeft`、`browDownLeft`、`eyeBlinkLeft`…會用來做表情與眨眼），
-  骨架為 **Mixamo 命名**（`Head`、`Spine1`、`LeftArm`、`LeftForeArm`…，可有 `mixamorig` 前綴）。沒有 `jawOpen` 的 .glb 會改用內建角色。
+  骨架為 **Mixamo 命名**（`Head`、`Spine1`、`LeftArm`、`LeftForeArm`…，可有 `mixamorig` 前綴）
+  或 **3ds Max Biped 命名**（Rocketbox 的 `Bip01 Head`、`Bip01 L UpperArm`…）。沒有 `jawOpen` 的 .glb 會改用內建角色。
 - **動漫風 `.vrm`**：需含表情（happy / angry / sad / surprised）、`aa` 嘴型與 `blink`，VRoid 匯出的模型預設都有。
   `.vrm` 預設不上傳 GitHub（見 `.gitignore`），因為 VRoid Hub 的模型授權多半禁止再散布。
 
 ## 去哪取得
-- **可公開使用**：Microsoft Rocketbox（MIT，115 個寫實人物，需用 Blender 轉成 GLB，TalkingHead 有轉換腳本）、
+- **可公開使用**：Microsoft Rocketbox（MIT，115 個寫實人物，用上面的 `tools/rocketbox_to_glb.py` 轉檔）、
   MakeHuman / MPFB（CC0，自己在 Blender 捏人）。
 - **限個人／非商業使用**：Avaturn（照片產生寫實人物；條款規定所有權屬 Avaturn、僅供個人使用、需標示來源），
   網站給別人用之前請先取得書面同意。

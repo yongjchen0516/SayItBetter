@@ -74,7 +74,7 @@ flutter build web --release
 - 對方的回應和教練點評是分開取得的：對方先開口，點評稍後出現在你的那句話下方。
 - 也可以隨時打字回覆。**iPhone（區網 http）** 無法使用麥克風與語音辨識，會自動隱藏麥克風，但仍看得到角色、聽得到對方說話。
 - 開始前可選對方是「女生／男生」：角色外觀、對方的聲音（女聲曉臻／男聲雲哲）與說話口吻都會跟著改變。
-- 女生預設是寫實 3D 人物（`avatar/models/female.glb`，CC0 授權），男生是內建卡通角色。
+- 女生、男生都是寫實 3D 人物（`avatar/models/female.glb`、`male.glb`，來自 Microsoft Rocketbox，MIT 授權）。
 - 想換成自己的角色：把寫實 `.glb`（需含 ARKit 臉部控制點）或動漫風 `.vrm` 放進 `avatar/models/`
   （女生 `female.*`，男生 `male.*`，也可依性格命名如 `male_強勢直率.glb`），格式、授權與取得方式見該資料夾的 README。
 - 瀏覽器內建的語音辨識需要連網。
