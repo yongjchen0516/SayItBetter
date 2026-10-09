@@ -78,6 +78,74 @@ flutter build web --release
   也可依性格命名如 `male_強勢直率.vrm`），說明見該資料夾的 README。
 - 瀏覽器內建的語音辨識需要連網。
 
+## 部署：上傳 GitHub ＋ Render 雲端
+
+雲端只跑 FastAPI 後端（`api.py`），它同時提供手機版網頁與 3D 角色頁面；Streamlit 電腦版不部署。
+部署設定都已寫在 `render.yaml`（Render Blueprint）與 `requirements-server.txt`。
+
+### 1. 上傳到 GitHub
+1. 到 https://github.com/new 建立新的儲存庫（例如 `SayItBetter`）。**不要**勾選「Add a README / .gitignore / license」，保持空的。
+   Public 或 Private 都可以，Render 都能讀取。
+2. 在專案資料夾執行（把網址換成你的儲存庫）：
+   ```powershell
+   git remote add origin https://github.com/<你的帳號>/SayItBetter.git
+   git push -u origin main
+   ```
+   第一次 push 會跳出 GitHub 登入視窗，用瀏覽器授權即可。
+3. 上傳前確認沒有密鑰被加入：`git status` 不應出現 `.streamlit/secrets.toml` 或 `templates.db`（已列在 `.gitignore`）。
+   `.vrm` 角色模型預設也不上傳，雲端會使用內建的卡通角色。
+
+之後改了程式，只要：
+```powershell
+git add .
+git commit -m "說明這次改了什麼"
+git push
+```
+Render 偵測到 push 會自動重新部署。改過 `mobile/lib` 的話，記得先 `flutter build web --release` 再 commit，因為雲端直接使用 `mobile/build/web`。
+
+### 2. 準備雲端資料庫（PostgreSQL）
+Render 免費方案的硬碟在每次重新部署或休眠後會清空，SQLite 的 `templates.db` 會不見，所以範本庫要放在外部 PostgreSQL。
+建議用 Neon（免費、不會過期）：
+1. 到 https://neon.tech 註冊並建立專案，區域選 **Asia Pacific (Singapore)**（與 Render 同區，速度較快）。
+2. 在 Dashboard →「Connection string」複製連線字串，格式像
+   `postgresql://user:password@ep-xxx.ap-southeast-1.aws.neon.tech/neondb?sslmode=require`。
+3. 資料表會在後端第一次啟動時自動建立，不需手動操作。
+
+### 3. 在 Render 建立服務
+1. 到 https://render.com 用 GitHub 帳號登入。
+2. 「New → Blueprint」，選剛才的 GitHub 儲存庫，Render 會讀取 `render.yaml`。
+3. 依提示填入密鑰（標示 `sync: false` 的變數）：
+
+   | 變數 | 內容 |
+   |---|---|
+   | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI 端點，同本機設定 |
+   | `AZURE_OPENAI_API_KEY` | Azure OpenAI 金鑰 |
+   | `GOOGLE_CLIENT_ID` | Google OAuth 用戶端 ID（不啟用登入可留空，但雲端所有人會共用同一個範本庫） |
+   | `GOOGLE_CLIENT_SECRET` | Google OAuth 用戶端密鑰 |
+   | `DATABASE_URL` | 上一步複製的 Neon 連線字串 |
+
+   `AZURE_OPENAI_DEPLOYMENT` 預設 `gpt-4.1`，部署名稱不同的話到服務的「Environment」修改；
+   `AUTH_COOKIE_SECRET` 由 Render 自動產生，`COOKIE_SECURE=1` 已設定好。
+   想加存取密碼，可在「Environment」另外加 `APP_PASSWORD`。
+4. 按「Apply」，等建置完成（約 3–5 分鐘），網址為 `https://say-it-better.onrender.com`
+   （名稱被用走時 Render 會加後綴，以服務頁面上顯示的為準）。
+
+### 4. 把雲端網址加到 Google 登入
+回到 Google Cloud Console →「憑證」→ 你的 OAuth 用戶端，在「已授權的重新導向 URI」**新增**：
+```
+https://<你的 Render 網址>/api/auth/callback
+```
+（保留原本 localhost 的兩個，本機開發仍可用。）OAuth 同意畫面若仍是「測試」狀態，要登入的帳號必須在「測試使用者」名單內。
+
+### 5. 使用
+- 手機或電腦瀏覽器開 `https://<你的 Render 網址>`，用 Google 登入即可。因為是 HTTPS，**iPhone Safari 也能使用麥克風**。
+- iPhone：Safari 分享鍵 →「加入主畫面」，就像 App 一樣開啟。
+
+### 注意事項
+- **休眠**：免費方案閒置 15 分鐘會休眠，下次開啟要等 30–60 秒喚醒，屬正常現象。
+- **建置失敗**：到 Render 服務頁的「Logs」看錯誤訊息，常見是環境變數填錯或 `DATABASE_URL` 少了 `?sslmode=require`。
+- **健康檢查**：Render 以 `/api/meta` 檢查服務是否正常，可直接開這個網址確認後端有在運作（有回傳 JSON 即正常）。
+
 ## 語音功能注意事項
 - **語音輸入（🎙️）**：使用瀏覽器內建的語音辨識，請用 **Chrome 或 Edge** 開啟，並允許麥克風權限。
 - **語音試聽（🔊）**：edge-tts 與 gTTS 都需要連網。可在側邊欄切換女聲／男聲。
