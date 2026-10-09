@@ -1,4 +1,4 @@
-"""生活人際溝通輔助系統 — Streamlit 主程式。"""
+"""Say It Better（生活人際溝通輔助系統）— Streamlit 主程式。"""
 import streamlit as st
 
 import ai_service
@@ -6,7 +6,7 @@ import audio_service
 import auth_config
 import database
 
-st.set_page_config(page_title="生活人際溝通輔助系統", page_icon="💬", layout="wide")
+st.set_page_config(page_title="Say It Better", page_icon="💬", layout="wide")
 database.init_db()
 
 
@@ -29,7 +29,8 @@ def require_user() -> str:
     if not LOGIN_ENABLED:
         return auth_config.LOCAL_USER_ID
     if not st.user.get("is_logged_in"):
-        st.title("💬 生活人際溝通輔助系統")
+        st.title("💬 Say It Better")
+        st.caption("生活人際溝通輔助系統")
         st.write("說出口之前，先練習一次。請先登入，你的話術範本只有你自己看得到。")
         if st.button("使用 Google 登入", type="primary"):
             st.login("google")
@@ -264,7 +265,8 @@ PAGES = {
 }
 
 with st.sidebar:
-    st.title("生活人際溝通輔助系統")
+    st.title("Say It Better")
+    st.caption("生活人際溝通輔助系統")
     page = st.radio("功能", list(PAGES), label_visibility="collapsed")
     st.caption("說出口之前，先練習一次。")
     st.selectbox("🔊 朗讀聲音", list(audio_service.VOICES), key="voice_name")

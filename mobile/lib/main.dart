@@ -16,7 +16,7 @@ class CommApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-        title: '生活人際溝通輔助系統',
+        title: 'Say It Better',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorSchemeSeed: Colors.teal,
@@ -212,9 +212,15 @@ class LoginScreen extends StatelessWidget {
               children: [
                 Icon(Icons.forum_outlined, size: 56, color: theme.colorScheme.primary),
                 const SizedBox(height: 12),
+                Text('Say It Better',
+                    style: theme.textTheme.headlineMedium
+                        ?.copyWith(fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center),
                 Text('生活人際溝通輔助系統',
-                    style: theme.textTheme.headlineSmall, textAlign: TextAlign.center),
-                const SizedBox(height: 8),
+                    style: theme.textTheme.titleSmall
+                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                    textAlign: TextAlign.center),
+                const SizedBox(height: 12),
                 Text('說出口之前，先練習一次。\n登入後，你的話術範本只有你自己看得到。',
                     style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
                 const SizedBox(height: 28),

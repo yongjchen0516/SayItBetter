@@ -31,7 +31,7 @@ LOCAL_HOSTS = {"localhost", "127.0.0.1"}
 
 AUTH = auth_config.load()
 
-app = FastAPI(title="生活人際溝通輔助系統 API")
+app = FastAPI(title="Say It Better API")
 app.add_middleware(
     SessionMiddleware,
     secret_key=AUTH.cookie_secret,

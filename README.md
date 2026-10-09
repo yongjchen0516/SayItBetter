@@ -1,4 +1,6 @@
-# 生活人際溝通輔助系統
+# Say It Better
+
+生活人際溝通輔助系統：說出口之前，先練習一次。
 
 Streamlit + Azure OpenAI + SQLite，支援語音輸入（STT）與語音試聽（TTS）。
 

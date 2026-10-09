@@ -2,7 +2,7 @@
 # 標示 sync: false 的變數是密鑰，Render 會在建立時請你填入，不會寫在程式碼裡。
 services:
   - type: web
-    name: comm-assistant
+    name: say-it-better   # 網址會是 https://say-it-better.onrender.com（被用走時 Render 會自動加後綴）
     runtime: python
     plan: free
     region: singapore
