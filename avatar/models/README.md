@@ -4,13 +4,14 @@
 
 | 性別 | 尋找順序 |
 |---|---|
-| 女生 | `female_<性格>` → `female` → `default` → 內建卡通女生 |
-| 男生 | `male_<性格>` → `male` → 內建卡通男生 |
+| 女生 | `female_<性格>` → `female` → `default` |
+| 男生 | `male_<性格>` → `male` |
 
 - `<性格>` 為：強勢直率、敏感玻璃心、情緒勒索、開門見山、一般友善。例如 `male_強勢直率.glb`。
 - `default` 視為**女生**模型，選男生時不會使用它。
+- 都找不到或載入失敗時，畫面顯示「角色載入失敗」（不再有卡通角色），對話與語音照常可用。
 - 放好後在瀏覽器按 Ctrl+F5 重新整理即可，不需重啟後端。
-- 單獨測試：開 `/avatar/index.html?gender=female&model&emotion=happy&mouth=0.5`。
+- 單獨測試：開 `/avatar/index.html?gender=male&emotion=happy&mouth=0.5`。
 
 ## 目前內建的模型
 | 檔案 | 來源 | 授權 |
@@ -30,7 +31,7 @@ python tools/shrink_glb.py male_raw.glb avatar/models/male.glb    # 約 30 MB �
 ## 支援的格式
 - **寫實 `.glb`**：需含 **ARKit 臉部控制點**（至少 `jawOpen`，另有 `mouthSmileLeft`、`browDownLeft`、`eyeBlinkLeft`…會用來做表情與眨眼），
   骨架為 **Mixamo 命名**（`Head`、`Spine1`、`LeftArm`、`LeftForeArm`…，可有 `mixamorig` 前綴）
-  或 **3ds Max Biped 命名**（Rocketbox 的 `Bip01 Head`、`Bip01 L UpperArm`…）。沒有 `jawOpen` 的 .glb 會改用內建角色。
+  或 **3ds Max Biped 命名**（Rocketbox 的 `Bip01 Head`、`Bip01 L UpperArm`…）。沒有 `jawOpen` 的 .glb 無法使用。
 - **動漫風 `.vrm`**：需含表情（happy / angry / sad / surprised）、`aa` 嘴型與 `blink`，VRoid 匯出的模型預設都有。
   `.vrm` 預設不上傳 GitHub（見 `.gitignore`），因為 VRoid Hub 的模型授權多半禁止再散布。
 
