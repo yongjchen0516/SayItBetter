@@ -8,6 +8,8 @@ import 'models.dart';
 import 'screens/generate_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/simulate_screen.dart';
+import 'theme.dart';
+import 'widgets/doodles.dart';
 
 void main() => runApp(const CommApp());
 
@@ -18,15 +20,9 @@ class CommApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
         title: 'Say It Better',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorSchemeSeed: Colors.teal,
-          useMaterial3: true,
-        ),
-        darkTheme: ThemeData(
-          colorSchemeSeed: Colors.teal,
-          brightness: Brightness.dark,
-          useMaterial3: true,
-        ),
+        // 插畫風只做淺色版：深色模式會讓奶黃、珊瑚粉失去輕鬆的感覺
+        theme: buildTheme(),
+        themeMode: ThemeMode.light,
         home: const AppGate(),
       );
 }
@@ -210,18 +206,16 @@ class LoginScreen extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.forum_outlined, size: 56, color: theme.colorScheme.primary),
-                const SizedBox(height: 12),
+                const _HeroFaces(),
+                const SizedBox(height: 16),
                 Text('Say It Better',
                     style: theme.textTheme.headlineMedium
-                        ?.copyWith(fontWeight: FontWeight.bold),
+                        ?.copyWith(fontWeight: FontWeight.w900),
                     textAlign: TextAlign.center),
-                Text('生活人際溝通輔助系統',
-                    style: theme.textTheme.titleSmall
-                        ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                Text('說出口之前，先練習一次。\n登入後，你的話術範本只有你自己看得到。',
+                const SizedBox(height: 8),
+                const StickerLabel('生活人際溝通輔助系統', color: Palette.sky),
+                const SizedBox(height: 16),
+                Text('說出口之前，先輕鬆練習一次 ✌️\n登入後，你的話術範本只有你自己看得到。',
                     style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
                 const SizedBox(height: 28),
                 if (canLogin)
@@ -232,10 +226,10 @@ class LoginScreen extends StatelessWidget {
                     label: const Text('使用 Google 登入'),
                   )
                 else
-                  Card(
+                  Sticker(
                     color: theme.colorScheme.errorContainer,
                     child: const Padding(
-                      padding: EdgeInsets.all(16),
+                      padding: EdgeInsets.zero,
                       child: Text(
                         '這個網址無法使用 Google 登入。\n'
                         'Google 只允許在 localhost 或 HTTPS 網址登入，'
@@ -265,7 +259,8 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
-  int _index = 0;
+  // 網址可帶 ?tab=0/1/2 直接開啟話術／演練／範本庫
+  int _index = (int.tryParse(Uri.base.queryParameters['tab'] ?? '') ?? 0).clamp(0, 2);
 
   static const _titles = ['話術生成', '對話演練', '話術範本庫'];
 
@@ -348,24 +343,60 @@ class _HomeShellState extends State<HomeShell> {
           const LibraryScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-              icon: Icon(Icons.chat_bubble_outline),
-              selectedIcon: Icon(Icons.chat_bubble),
-              label: '話術'),
-          NavigationDestination(
-              icon: Icon(Icons.theater_comedy_outlined),
-              selectedIcon: Icon(Icons.theater_comedy),
-              label: '演練'),
-          NavigationDestination(
-              icon: Icon(Icons.bookmarks_outlined),
-              selectedIcon: Icon(Icons.bookmarks),
-              label: '範本庫'),
-        ],
+      bottomNavigationBar: Container(
+        // 描邊要佔自己的空間，否則會被導覽列的底色蓋掉
+        padding: const EdgeInsets.only(top: kStroke),
+        color: Palette.ink,
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (i) => setState(() => _index = i),
+          destinations: const [
+            NavigationDestination(
+                icon: Icon(Icons.chat_bubble_outline),
+                selectedIcon: Icon(Icons.chat_bubble),
+                label: '話術'),
+            NavigationDestination(
+                icon: Icon(Icons.theater_comedy_outlined),
+                selectedIcon: Icon(Icons.theater_comedy),
+                label: '演練'),
+            NavigationDestination(
+                icon: Icon(Icons.bookmarks_outlined),
+                selectedIcon: Icon(Icons.bookmarks),
+                label: '範本庫'),
+          ],
+        ),
       ),
     );
   }
+}
+
+/// 登入頁的三張小圓臉：歪歪的、疊在一起，旁邊點綴小星星。
+class _HeroFaces extends StatelessWidget {
+  const _HeroFaces();
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        width: 220,
+        height: 110,
+        child: Stack(clipBehavior: Clip.none, children: [
+          Positioned(
+              left: 8,
+              top: 26,
+              child: Transform.rotate(
+                  angle: -0.2, child: const MoodFace(mood: Mood.gentle, size: 72))),
+          Positioned(
+              left: 74,
+              top: 0,
+              child: Transform.rotate(
+                  angle: 0.05, child: const MoodFace(mood: Mood.humor, size: 80))),
+          Positioned(
+              left: 144,
+              top: 28,
+              child: Transform.rotate(
+                  angle: 0.2, child: const MoodFace(mood: Mood.direct, size: 70))),
+          const Positioned(left: 0, top: 0, child: Sparkle(size: 20, color: Palette.sky)),
+          const Positioned(right: 0, top: 6, child: Sparkle(size: 16, color: Palette.coral)),
+          const Positioned(right: 30, bottom: -6, child: Sparkle(size: 14)),
+        ]),
+      );
 }

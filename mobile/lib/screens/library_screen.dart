@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../common.dart';
 import '../models.dart';
+import '../theme.dart';
+import '../widgets/doodles.dart';
 import '../widgets/play_button.dart';
 
 class LibraryScreen extends StatefulWidget {
@@ -205,8 +207,17 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _items.isEmpty
-                    ? const Center(child: Text('目前沒有範本。\n到「話術」頁儲存你喜歡的話術吧！',
-                        textAlign: TextAlign.center))
+                    ? const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            MoodFace(mood: Mood.neutral, size: 72),
+                            SizedBox(height: 14),
+                            Text('這裡還空空的～\n到「話術」頁把喜歡的說法存起來吧！',
+                                textAlign: TextAlign.center),
+                          ],
+                        ),
+                      )
                     : RefreshIndicator(
                         onRefresh: _load,
                         child: ListView.builder(
@@ -217,19 +228,32 @@ class _LibraryScreenState extends State<LibraryScreen> {
                             final meta = [t.scenario, t.channel, t.style]
                                 .where((e) => e.isNotEmpty)
                                 .join(' ・ ');
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 6),
+                            final mood = moodForStyle(t.style);
+                            return Sticker(
+                              padding: const EdgeInsets.fromLTRB(14, 12, 14, 6),
                               child: Padding(
-                                padding: const EdgeInsets.all(14),
+                                padding: EdgeInsets.zero,
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(meta,
-                                        style: theme.textTheme.titleSmall
-                                            ?.copyWith(
-                                                fontWeight: FontWeight.bold)),
-                                    Text(t.createdAt,
-                                        style: theme.textTheme.bodySmall),
+                                    Row(children: [
+                                      MoodFace(mood: mood, size: 34),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(meta,
+                                                style: theme.textTheme.titleSmall),
+                                            Text(t.createdAt,
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                        color: Palette.inkSoft)),
+                                          ],
+                                        ),
+                                      ),
+                                    ]),
                                     const SizedBox(height: 8),
                                     SelectableText(t.content),
                                     if (t.note.isNotEmpty) ...[

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../common.dart';
 import '../models.dart';
+import '../theme.dart';
+import '../widgets/doodles.dart';
 import '../widgets/mic_button.dart';
 import '../widgets/scenario_picker.dart';
 import '../widgets/script_card.dart';
@@ -80,6 +82,11 @@ class _GenerateScreenState extends State<GenerateScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          const GreetingBanner(
+            title: '想說的話，交給我們整理 ✨',
+            subtitle: '寫下心裡話就好，會幫你變成溫和、直接、幽默三種說法。',
+          ),
+          const SizedBox(height: 8),
           ScenarioPicker(
             scenarios: widget.meta.scenarios,
             onChanged: (v) => _scenario = v,
@@ -133,9 +140,15 @@ class _GenerateScreenState extends State<GenerateScreen> {
             label: Text(_busy ? 'AI 思考中…' : '生成話術'),
           ),
           if (result != null) ...[
-            const Divider(height: 40),
-            Text('情境：$_resultScenario（$_resultChannel）',
-                style: theme.textTheme.titleMedium),
+            const SizedBox(height: 28),
+            Row(children: [
+              const Sparkle(size: 20, color: Palette.coral),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text('情境：$_resultScenario（$_resultChannel）',
+                    style: theme.textTheme.titleMedium),
+              ),
+            ]),
             const SizedBox(height: 8),
             for (final s in result.scripts)
               ScriptCard(
@@ -145,13 +158,15 @@ class _GenerateScreenState extends State<GenerateScreen> {
               ),
             const SizedBox(height: 8),
             _InfoCard(
-              icon: Icons.swap_horiz,
+              emoji: '🔄',
               title: '換位思考',
+              color: Palette.skySoft,
               child: Text(result.perspective),
             ),
             _InfoCard(
-              icon: Icons.warning_amber_rounded,
+              emoji: '💣',
               title: '溝通地雷',
+              color: Palette.coralSoft,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -170,8 +185,9 @@ class _GenerateScreenState extends State<GenerateScreen> {
               ),
             ),
             _InfoCard(
-              icon: Icons.lightbulb_outline,
+              emoji: '💡',
               title: '溝通小技巧',
+              color: Palette.creamSoft,
               child: Text(result.tip),
             ),
           ],
@@ -182,34 +198,28 @@ class _GenerateScreenState extends State<GenerateScreen> {
 }
 
 class _InfoCard extends StatelessWidget {
-  final IconData icon;
+  final String emoji;
   final String title;
+  final Color color;
   final Widget child;
   const _InfoCard(
-      {required this.icon, required this.title, required this.child});
+      {required this.emoji,
+      required this.title,
+      required this.color,
+      required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      color: theme.colorScheme.secondaryContainer,
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(icon, size: 20),
-              const SizedBox(width: 8),
-              Text(title,
-                  style: theme.textTheme.titleSmall
-                      ?.copyWith(fontWeight: FontWeight.bold)),
-            ]),
-            const SizedBox(height: 8),
-            child,
-          ],
-        ),
+    return Sticker(
+      color: color,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StickerLabel('$emoji $title', color: Colors.white),
+          const SizedBox(height: 10),
+          child,
+        ],
       ),
     );
   }

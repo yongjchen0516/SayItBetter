@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import '../api_client.dart';
 import '../common.dart';
 import '../models.dart';
+import '../theme.dart';
 import '../widgets/avatar_view.dart';
+import '../widgets/doodles.dart';
 import '../widgets/mic_button.dart';
 import '../widgets/play_button.dart';
 import '../widgets/scenario_picker.dart';
@@ -314,6 +316,13 @@ class _SimulateScreenState extends State<SimulateScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        const GreetingBanner(
+          title: '放輕鬆，只是練習 🙌',
+          subtitle: '說錯也沒關係，每句話都有教練陪你調整。',
+          faces: [Mood.humor, Mood.gentle],
+          color: Palette.skySoft,
+        ),
+        const SizedBox(height: 8),
         ScenarioPicker(
           scenarios: widget.meta.scenarios,
           onChanged: (v) => _scenarioInput = v,
@@ -430,10 +439,15 @@ class _SimulateScreenState extends State<SimulateScreen> {
           if (_voiceMode && _avatar != null) ...[
             SizedBox(
               height: avatarHeight,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(12, 4, 16, 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Palette.ink, width: kStroke),
+                  boxShadow: kStickerShadow,
+                ),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18),
                   child: AvatarView(controller: _avatar!),
                 ),
               ),
@@ -449,8 +463,8 @@ class _SimulateScreenState extends State<SimulateScreen> {
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
                       child: Text('「$_caption」',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.primary),
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
                           textAlign: TextAlign.center),
                     ),
                 ],
@@ -537,19 +551,27 @@ class _Bubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final mine = entry.role == 'user';
-    final bg = mine
-        ? theme.colorScheme.primaryContainer
-        : theme.colorScheme.surfaceContainerHighest;
+    // 對話泡泡：我＝珊瑚粉、對方＝白色，粗描邊＋硬陰影，靠說話者那側的角比較尖
+    final bg = mine ? Palette.coralSoft : Colors.white;
+    const r = Radius.circular(18);
+    const tip = Radius.circular(4);
     final maxW = MediaQuery.of(context).size.width * 0.82;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+        margin: const EdgeInsets.fromLTRB(2, 6, 6, 6),
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
         constraints: BoxConstraints(maxWidth: maxW > 560 ? 560 : maxW),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.only(
+            topLeft: r,
+            topRight: r,
+            bottomLeft: mine ? r : tip,
+            bottomRight: mine ? tip : r,
+          ),
+          border: Border.all(color: Palette.ink, width: 2),
+          boxShadow: const [BoxShadow(color: Palette.ink, offset: Offset(2, 3))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -571,14 +593,14 @@ class _FeedbackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      color: theme.colorScheme.secondaryContainer,
-      margin: const EdgeInsets.symmetric(vertical: 4),
+    return Sticker(
+      color: Palette.skySoft,
+      padding: EdgeInsets.zero,
+      margin: const EdgeInsets.fromLTRB(0, 6, 6, 10),
       child: ExpansionTile(
         initiallyExpanded: true,
-        leading: const Icon(Icons.rate_review_outlined),
-        title: const Text('教練點評'),
+        leading: const MoodFace(mood: Mood.gentle, size: 32),
+        title: const Text('教練點評', style: TextStyle(fontWeight: FontWeight.w800)),
         childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
         expandedCrossAxisAlignment: CrossAxisAlignment.start,
         children: [
