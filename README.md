@@ -7,7 +7,7 @@ Streamlit + Azure OpenAI + SQLite，支援語音輸入（STT）與語音試聽�
 ## 檔案結構
 - `app.py`：Streamlit 介面（話術生成／對話模擬演練／範本庫），含語音輸入與播放元件
 - `ai_service.py`：Azure OpenAI 串接與 Prompt
-- `audio_service.py`：TTS（edge-tts，失敗退回 gTTS）與 STT（瀏覽器語音辨識）
+- `audio_service.py`：TTS（Azure AI Speech → edge-tts → gTTS 依序嘗試）與 STT（瀏覽器語音辨識）
 - `database.py`：SQLite 初始化與 CRUD（資料存於 `templates.db`，首次執行自動建立）
 
 ## 執行（Windows PowerShell）
@@ -124,6 +124,8 @@ Render 免費方案的硬碟在每次重新部署或休眠後會清空，SQLite 
    | `GOOGLE_CLIENT_ID` | Google OAuth 用戶端 ID（不啟用登入可留空，但雲端所有人會共用同一個範本庫） |
    | `GOOGLE_CLIENT_SECRET` | Google OAuth 用戶端密鑰 |
    | `DATABASE_URL` | 上一步複製的 Neon 連線字串 |
+   | `AZURE_SPEECH_KEY` | Azure AI Speech 金鑰（男聲需要，見下方「語音功能注意事項」；可先留空） |
+   | `AZURE_SPEECH_REGION` | Azure AI Speech 區域，例如 `southeastasia` |
 
    `AZURE_OPENAI_DEPLOYMENT` 預設 `gpt-4.1`，部署名稱不同的話到服務的「Environment」修改；
    `AUTH_COOKIE_SECRET` 由 Render 自動產生，`COOKIE_SECURE=1` 已設定好。
@@ -149,6 +151,12 @@ https://<你的 Render 網址>/api/auth/callback
 
 ## 語音功能注意事項
 - **語音輸入（🎙️）**：使用瀏覽器內建的語音辨識，請用 **Chrome 或 Edge** 開啟，並允許麥克風權限。
-- **語音試聽（🔊）**：edge-tts 與 gTTS 都需要連網。可在側邊欄切換女聲／男聲。
+- **語音試聽（🔊）**：依序嘗試 Azure AI Speech → edge-tts → gTTS，都需要連網。可在側邊欄切換女聲／男聲；演練時對方的聲音跟著所選性別。
+- **男聲需要 Azure AI Speech**：edge-tts 是非官方管道，目前被微軟擋下（403）；退回的 gTTS 只有女聲，所以沒設定 Azure 語音時，選男生也會聽到女聲。
+  設定方式：
+  1. Azure 入口網站 →「建立資源」→ 搜尋 **Speech**（語音服務）→ 建立；定價層選 **Free F0**（每月 50 萬字免費），區域選 **Southeast Asia**。
+  2. 建好後到資源的「金鑰與端點」，複製「金鑰 1」與「位置/區域」（例如 `southeastasia`）。
+  3. 本機：`$env:AZURE_SPEECH_KEY = "金鑰"`、`$env:AZURE_SPEECH_REGION = "southeastasia"`；雲端：在 Render 的 Environment 加入同名的兩個變數。
+  - 聲音與之前相同（曉臻、雲哲）。若語音仍是女聲，到 Render 的 Logs 搜尋「Azure 語音失敗」看原因（401 = 金鑰錯、404 = 區域錯）。
 - 部署名稱必須是 Azure 中的**部署名稱**，不一定等於模型名稱。
 - API 版本預設 `2024-10-21`，可用 `AZURE_OPENAI_API_VERSION` 覆寫；Foundry（`services.ai.azure.com`）端點會自動改走 v1 路徑。

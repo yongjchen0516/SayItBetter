@@ -21,6 +21,11 @@ services:
         sync: false
       - key: AZURE_OPENAI_DEPLOYMENT
         value: gpt-4.1
+      # 語音（男聲／女聲）：Azure AI Speech 的金鑰與區域（例如 southeastasia）；沒設定時退回 edge-tts／gTTS
+      - key: AZURE_SPEECH_KEY
+        sync: false
+      - key: AZURE_SPEECH_REGION
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

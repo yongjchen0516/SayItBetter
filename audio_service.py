@@ -1,15 +1,24 @@
 """語音處理模組：TTS（文字轉語音）與 STT（語音轉文字）。
 
-- TTS：優先使用 edge-tts（免金鑰、台灣中文語音），失敗時退回 gTTS。
+- TTS：依序嘗試
+  1. Azure AI Speech（官方服務，需環境變數 AZURE_SPEECH_KEY、AZURE_SPEECH_REGION；與 edge-tts 同一套台灣中文聲音）
+  2. edge-tts（免金鑰，但微軟可能隨時擋掉連線）
+  3. gTTS（只有一種女聲，選男聲也會是女聲）
 - STT：使用 streamlit-mic-recorder 的瀏覽器語音辨識（Web Speech API，
   請用 Chrome 或 Edge 開啟網頁，並允許麥克風權限）。
 """
 import asyncio
 import io
+import logging
+import os
 import re
+from xml.sax.saxutils import escape
 
 import edge_tts
+import httpx
 from gtts import gTTS
+
+log = logging.getLogger(__name__)
 
 VOICES = {
     "女聲（曉臻）": "zh-TW-HsiaoChenNeural",
@@ -38,17 +47,47 @@ async def _edge_tts(text: str, voice: str) -> bytes:
     return buf.getvalue()
 
 
+def _azure_tts(text: str, voice: str) -> bytes | None:
+    """Azure AI Speech REST API；沒有設定金鑰時回傳 None。"""
+    key, region = os.getenv("AZURE_SPEECH_KEY"), os.getenv("AZURE_SPEECH_REGION")
+    if not (key and region):
+        return None
+    ssml = (
+        "<speak version='1.0' xml:lang='zh-TW'>"
+        f"<voice name='{voice}'>{escape(text)}</voice></speak>"
+    )
+    r = httpx.post(
+        f"https://{region.strip()}.tts.speech.microsoft.com/cognitiveservices/v1",
+        headers={
+            "Ocp-Apim-Subscription-Key": key.strip(),
+            "Content-Type": "application/ssml+xml",
+            "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+            "User-Agent": "SayItBetter",
+        },
+        content=ssml.encode("utf-8"),
+        timeout=20,
+    )
+    r.raise_for_status()
+    return r.content
+
+
 def text_to_speech(text: str, voice: str = VOICES["女聲（曉臻）"]) -> bytes:
     """回傳 mp3 位元組，可直接丟給 st.audio。"""
     text = _clean(text)
     if not text:
         raise AudioServiceError("沒有可朗讀的文字。")
     try:
+        audio = _azure_tts(text, voice)
+        if audio:
+            return audio
+    except Exception as e:
+        log.warning("Azure 語音失敗，改用 edge-tts：%s", e)
+    try:
         audio = asyncio.run(_edge_tts(text, voice))
         if audio:
             return audio
-    except Exception:
-        pass  # 退回 gTTS
+    except Exception as e:
+        log.warning("edge-tts 失敗，改用 gTTS（只有女聲）：%s", e)
     try:
         buf = io.BytesIO()
         gTTS(text=text, lang="zh-TW").write_to_fp(buf)
