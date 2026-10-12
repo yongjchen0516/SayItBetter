@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_client.dart';
 
@@ -7,6 +8,15 @@ import 'api_client.dart';
 class AppState {
   /// 目前選擇的朗讀聲音（後端的聲音名稱）。
   static final ValueNotifier<String> voice = ValueNotifier<String>('');
+
+  /// 切換朗讀聲音並記住（下次開啟沿用）。
+  static Future<void> setVoice(String v) async {
+    voice.value = v;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('voice', v);
+    } catch (_) {}
+  }
 
   /// 範本庫有變動時 +1，讓範本庫頁重新載入。
   static final ValueNotifier<int> templatesVersion = ValueNotifier<int>(0);

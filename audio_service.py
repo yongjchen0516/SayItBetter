@@ -87,29 +87,34 @@ def azure_status() -> str:
     return _azure_status
 
 
-def text_to_speech(text: str, voice: str = VOICES["女聲（曉臻）"]) -> bytes:
-    """回傳 mp3 位元組，可直接丟給 st.audio。"""
+def synthesize(text: str, voice: str = VOICES["女聲（曉臻）"]) -> tuple[bytes, bool]:
+    """回傳 (mp3 位元組, 是否為指定的聲音)。退回 gTTS 時聲音固定是女聲，第二個值為 False。"""
     text = _clean(text)
     if not text:
         raise AudioServiceError("沒有可朗讀的文字。")
     try:
         audio = _azure_tts(text, voice)
         if audio:
-            return audio
+            return audio, True
     except Exception as e:
         log.warning("Azure 語音失敗，改用 edge-tts：%s", e)
     try:
         audio = asyncio.run(_edge_tts(text, voice))
         if audio:
-            return audio
+            return audio, True
     except Exception as e:
         log.warning("edge-tts 失敗，改用 gTTS（只有女聲）：%s", e)
     try:
         buf = io.BytesIO()
         gTTS(text=text, lang="zh-TW").write_to_fp(buf)
-        return buf.getvalue()
+        return buf.getvalue(), False
     except Exception as e:
         raise AudioServiceError(f"語音生成失敗，請確認網路連線。({e})") from e
+
+
+def text_to_speech(text: str, voice: str = VOICES["女聲（曉臻）"]) -> bytes:
+    """回傳 mp3 位元組，可直接丟給 st.audio。"""
+    return synthesize(text, voice)[0]
 
 
 def speech_to_text(key: str, label: str = "🎙️ 語音輸入") -> str | None:

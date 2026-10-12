@@ -294,11 +294,7 @@ class _HomeShellState extends State<HomeShell> {
       ),
     );
     if (chosen == null) return;
-    AppState.voice.value = chosen;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('voice', chosen);
-    } catch (_) {}
+    await AppState.setVoice(chosen);
   }
 
   @override

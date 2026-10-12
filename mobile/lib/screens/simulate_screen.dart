@@ -159,12 +159,17 @@ class _SimulateScreenState extends State<SimulateScreen> {
     setState(() {});
   }
 
-  /// 對方的聲音跟著角色性別（女→女聲、男→男聲）；找不到對應聲音時用全域設定。
-  String get _partnerVoice {
-    final key = _gender == 'male' ? '男' : '女';
-    return widget.meta.voices.firstWhere((v) => v.startsWith(key),
-        orElse: () => AppState.voice.value);
+  /// 性別對應的聲音（女→女聲、男→男聲）；找不到時回傳 null。
+  String? _voiceFor(String gender) {
+    final key = gender == 'male' ? '男' : '女';
+    for (final v in widget.meta.voices) {
+      if (v.startsWith(key)) return v;
+    }
+    return null;
   }
+
+  /// 對方的聲音跟著角色性別；找不到對應聲音時用全域設定。
+  String get _partnerVoice => _voiceFor(_gender) ?? AppState.voice.value;
 
   void _speakLine(String line, String emotion) {
     final a = _avatar;
@@ -338,10 +343,15 @@ class _SimulateScreenState extends State<SimulateScreen> {
                 value: 'male', label: Text('男生'), icon: Icon(Icons.face)),
           ],
           selected: {_genderInput},
-          onSelectionChanged: (s) => setState(() => _genderInput = s.first),
+          onSelectionChanged: (s) {
+            setState(() => _genderInput = s.first);
+            // 右上角的朗讀聲音也一起切換，不必再手動選
+            final v = _voiceFor(s.first);
+            if (v != null) AppState.setVoice(v);
+          },
         ),
         const SizedBox(height: 4),
-        Text('角色外觀、聲音與說話口吻都會跟著改變',
+        Text('角色外觀、聲音與說話口吻都會跟著改變（朗讀聲音也一起切換）',
             style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 16),
         TextField(

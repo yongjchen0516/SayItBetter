@@ -312,8 +312,10 @@ def tts(
         raise HTTPException(status_code=401, detail="密碼錯誤或尚未輸入密碼。")
     if voice not in audio_service.VOICES:
         raise HTTPException(status_code=400, detail="未知的聲音選項。")
-    audio = audio_service.text_to_speech(text, audio_service.VOICES[voice])
-    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": "private, max-age=3600"})
+    audio, exact = audio_service.synthesize(text, audio_service.VOICES[voice])
+    # 退回 gTTS 時聲音不對（固定女聲），不讓瀏覽器快取，語音服務恢復後才不會一直播到舊檔
+    cache = "private, max-age=3600" if exact else "no-store"
+    return Response(content=audio, media_type="audio/mpeg", headers={"Cache-Control": cache})
 
 
 # ---------------------------------------------------------------- 3D 虛擬人物網頁層（需在 "/" 之前掛載）
