@@ -71,6 +71,22 @@ def _azure_tts(text: str, voice: str) -> bytes | None:
     return r.content
 
 
+_azure_status: str | None = None
+
+
+def azure_status() -> str:
+    """Azure 語音的狀態（給 /api/meta 診斷用，不含金鑰）：未設定／正常／失敗原因。第一次呼叫時試念一個字並記住結果。"""
+    global _azure_status
+    if _azure_status is None:
+        try:
+            _azure_status = "正常" if _azure_tts("好", VOICES["男聲（雲哲）"]) else "未設定"
+        except httpx.HTTPStatusError as e:
+            _azure_status = f"失敗：HTTP {e.response.status_code}"
+        except Exception as e:
+            _azure_status = f"失敗：{type(e).__name__}"
+    return _azure_status
+
+
 def text_to_speech(text: str, voice: str = VOICES["女聲（曉臻）"]) -> bytes:
     """回傳 mp3 位元組，可直接丟給 st.audio。"""
     text = _clean(text)

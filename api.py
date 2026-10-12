@@ -202,6 +202,7 @@ def meta():
         "channels": ai_service.CHANNELS,
         "personas": ai_service.PERSONAS,
         "voices": list(audio_service.VOICES),
+        "azure_speech": audio_service.azure_status(),   # 診斷用：男聲需要 Azure 語音
     }
 
 
